@@ -7,10 +7,30 @@ export async function getTokenOrRefresh() {
 
     if (speechToken === undefined) {
         try {
-            const res = await axios.get('/api/get-speech-token');
-            const token = res.data.token;
-            const region = res.data.region;
-            cookie.set('speech-token', region + ':' + token, {maxAge: 540, path: '/'});
+            const speechKey = process.env.REACT_APP_SPEECH_KEY;
+            const speechRegion = process.env.REACT_APP_SPEECH_REGION;
+            let token = ""
+            let region = ""
+
+            if (speechKey === 'paste-your-speech-key-here' || speechRegion === 'paste-your-speech-region-here') {
+                console.err('You forgot to add your speech key or region to the .env file.');
+            } else {
+                try {
+                    const headers = { 
+                        headers: {
+                            'Ocp-Apim-Subscription-Key': speechKey,
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    };
+
+                    const tokenResponse = await axios.post(`https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, null, headers);
+                    token = tokenResponse.data;
+                    region = speechRegion;
+                    cookie.set('speech-token', region + ':' + token, {maxAge: 540, path: '/'});
+                } catch (err) {
+                    console.err('There was an error authorizing your speech key.');
+                }
+            } 
 
             console.log('Token fetched from back-end: ' + token);
             return { authToken: token, region: region };
